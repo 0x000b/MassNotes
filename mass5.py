@@ -1,41 +1,37 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 
 
 import argparse
 import requests
 from bs4 import BeautifulSoup
 from tabulate import tabulate
 
-SouhailZamal = argparse.ArgumentParser()
-SouhailZamal.add_argument('--userId','-u',type=str,required=True, help='Massar dyalak aflan/a ')
-SouhailZamal.add_argument('--passwd','-p',type=str,required=True, help='bach baghi dkhol bsalam ?? tadir mot de pass hhhh')
+Args = argparse.ArgumentParser()
+Args.add_argument('--userId','-u',type=str,required=True, help='Enter your UserName in the following Format: 123456789@taalim.ma')
+Args.add_argument('--passwd','-p',type=str,required=True, help='Provide your Password')
 
-args = SouhailZamal.parse_args()
+args = Args.parse_args()
 
-login_url = "https://massarservice.men.gov.ma/moutamadris/Account"
+LoginUrl = "https://massarservice.men.gov.ma/moutamadris/Account"
 session = requests.Session()
-response = session.get(login_url)
+response = session.get(LoginUrl)
 
 if response.status_code != 200:
     print("Error: Couldn't fetch the login page.")
     exit()
 
-# Extract CSRF token
 soup = BeautifulSoup(response.text, 'html.parser')
-csrf_token = soup.find('input', {'name': '__RequestVerificationToken'})['value']
-
-# Login data
-login_data = {
-    '__RequestVerificationToken': csrf_token,
+CsrfToken = soup.find('input', {'name': '__RequestVerificationToken'})['value']
+CsrfToken
+LoginData = {
+    '__RequestVerificationToken': CsrfToken,
     'UserName': args.userId,
     'Password': args.passwd
 }
 
-# Login
-login_response = session.post(login_url, data=login_data)
-if 'تسجيل الدخول' not in login_response.text:
-    print("Login Successful ✅")
+LoginResponse = session.post(LoginUrl, data=LoginData)
+if 'تسجيل الدخول' not in LoginResponse.text:
+    print("Login Successful")
 
-    # Arabic → French translation mapping
     translate_headers = {
         "المادة": "Matière",
         "الفرض الأول": "1er contrôle",
@@ -57,26 +53,24 @@ if 'تسجيل الدخول' not in login_response.text:
         "علوم الحياة والأرض": "Sciences de la vie et de la Terre"
     }
 
-    # Loop for multiple requests without restarting program
     while True:
-        year = input('l3am (année scolaire, ex: 2024) : ')
-        dawra = input('dawra (session, ex: 1 ou 2) : ')
+        year = input('Please Enter which year you want to review')
+        dawra = input('Please Enter which session you want to review ')
 
-        res_url = 'https://massarservice.men.gov.ma/moutamadris/TuteurEleves/GetBulletins'
+        ResUrl = 'https://massarservice.men.gov.ma/moutamadris/TuteurEleves/GetBulletins'
         res = {
             'Annee': year,
             'IdSession': dawra
         }
 
-        # Get bulletins
-        notes = session.post(res_url, data=res)
-        notes.encoding = "utf-8"  # make sure Arabic is correct
-
+        
+        notes = session.post(ResUrl, data=res)
+        notes.encoding = "utf-8"  
         soup = BeautifulSoup(notes.text, 'html.parser')
         table = soup.find("div", id="tab_cc").find("table")
 
         if not table:
-            print("⚠️ Impossible de trouver le tableau des notes.")
+            print("Error: Enable to get table of notes")
         else:
             headers = [translate_headers.get(th.get_text(strip=True), th.get_text(strip=True))
                        for th in table.find_all("th")]
@@ -90,11 +84,9 @@ if 'تسجيل الدخول' not in login_response.text:
 
             print(tabulate(rows, headers=headers, tablefmt="fancy_grid"))
 
-        # Ask if user wants to check another session
-        again = input("\nVoulez-vous vérifier une autre session ? (o/n) : ").strip().lower()
-        if again != "o":
+        again = input("\n Do you want anotherr Session? (y/n) : ").strip().lower()
+        if again != "y":
             break
 
 else:
-    print("Login Failed ❌")
-
+    print("Error: Login Failed")
